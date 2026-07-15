@@ -15,6 +15,15 @@
   probate, and vacancy. Results are ranked into Hot and Warm leads and presented in a clean table you can act on
   immediately or export to a markdown file.
 
+  Court Records Lead Finder (Lawsuit Scraping)
+  Point the skill at your county's public court-records portal (Tyler/Odyssey, CourtView, or the county clerk of courts)
+  and it turns raw lawsuit dockets into a ranked motivated-seller list. It walks you through filtering by case-filed date
+  across seven distress categories — tax foreclosure, mortgage foreclosure, probate/estate, divorce, eviction, code
+  violations, and liens/judgments — then paste the case list back in and AI scores every defendant with the Court Case
+  Distress Score (CCDS) rubric. Confirm ownership on the county auditor site, skip-trace for a phone number, and each
+  lead flows straight into the MSS table and Deal Analysis. Court and assessor records are public data; the skill
+  includes a TCPA/Do-Not-Call compliance note for the outreach step.
+
   Deal Analysis
   Plug in any property's numbers and the skill calculates your Maximum Allowable Offer (MAO) using the industry-standard
    70% rule, factoring in ARV, estimated repairs, and your target wholesale fee. It also outputs a Deal Scorecard so you

@@ -105,6 +105,93 @@ If user picks a property, automatically continue to **Stage 2** (Deal Analysis) 
 
 ---
 
+## Stage 0.5: Court Records Lead Finder (Lawsuit / Distress Scraping)
+
+**Trigger:** User says "scrape lawsuits", "court records", "find distressed owners", "pull the lists", "lawsuit leads", or mentions foreclosure/probate/tax court records.
+
+> **Why this works:** People named as defendants in certain lawsuits are often financially distressed and *own real estate they need to offload fast* — a tax lien, a foreclosure filing, an inherited house in probate, a divorce forcing a sale. Court records are **public**, free, and updated daily. AI does the heavy lifting: reading hundreds of case captions and flagging the handful that are likely motivated sellers. This is the highest-signal, lowest-cost lead source in wholesaling.
+
+### Step 1 — Find the county's public court records portal
+
+Ask the user for their **county and state**, then help them locate the portal. Most U.S. counties use one of these systems:
+
+| System | Typical URL pattern | Notes |
+|--------|--------------------|-------|
+| Tyler Technologies (Odyssey) | `research.[st].tylerhost.net` / `[county].tylerhost.net` | e.g. Ohio → `research.oh.tylerhost.net` |
+| Odyssey Portal | `[county]courts.[state].gov` / `publicaccess.[county].gov` | "Case Records Search" |
+| CourtView / eCourts | county Clerk of Courts site → "Online Docket" | |
+| County Clerk / Recorder | `[county].gov` → "Court Records" or "Land Records" | for lien/deed filings |
+
+If unsure, run **WebSearch**: `"[COUNTY] [STATE] clerk of courts public case search"` and `"[COUNTY] [STATE] court records advanced search"`.
+
+### Step 2 — Search by case type + date (the "seven lists")
+
+In the portal's **Advanced Search**, filter by **Case Filed Date** (pull the last 30 days, then repeat monthly) AND by case type. These are the seven distress categories that produce motivated-seller leads:
+
+| # | List | What to search | Distress signal |
+|---|------|----------------|-----------------|
+| 1 | **Tax delinquency / tax foreclosure** | "Dept. of Taxation v.", "Treasurer v.", tax lien foreclosure | Owner is cash-strapped, behind on taxes |
+| 2 | **Mortgage foreclosure** | foreclosure complaints, "Bank v.", "Mortgage v." | Bank moving to take the house |
+| 3 | **Probate / estate** | decedent estates, "Estate of", executor filings | Heirs want to liquidate inherited property |
+| 4 | **Divorce / dissolution** | domestic relations, "In re marriage of" | Forced sale to split assets |
+| 5 | **Eviction / landlord** | forcible entry & detainer, "v. Tenant" | Tired landlords wanting out |
+| 6 | **Code violations / nuisance** | city v. owner, housing court, condemnation | Property is distressed & costing the owner |
+| 7 | **Liens & judgments** | mechanic's liens, HOA liens, civil judgments | Financial pressure, clouded title |
+
+Copy the full results list (case number, caption/parties, case type, file date).
+
+### Step 3 — Classify with AI (paste the list back to this skill)
+
+Have the user paste the copied case list. Then rank each case for motivated-seller potential using this rubric:
+
+**Court Case Distress Score (CCDS)** — per case:
+
+| Signal in case | Points |
+|----------------|--------|
+| Tax foreclosure / tax delinquency | +4 |
+| Mortgage foreclosure | +4 |
+| Probate / estate of decedent | +3 |
+| Code violation / condemnation | +3 |
+| Divorce forcing property sale | +2 |
+| Eviction filed by owner (tired landlord) | +2 |
+| Mechanic's/HOA lien or civil judgment | +2 |
+| Defendant is an individual (not a business) | +1 |
+| Multiple filings against same owner | +2 |
+
+Output the top targets as a table:
+
+```
+## Court Records Leads — [COUNTY], [ST]  (cases filed [range])
+
+| # | Defendant / Owner | Case Type | Case # | CCDS | Why motivated |
+|---|-------------------|-----------|--------|------|---------------|
+| 1 | Vincent Sample    | Tax forecl.| ...   | 5    | Behind on state taxes |
+...
+```
+
+### Step 4 — Confirm they own real property
+
+For each top lead, verify ownership and value on the **county auditor / tax appraiser / assessor** site (search: `"[COUNTY] [STATE] auditor property search"`). Confirm:
+- Defendant's name matches a property owner
+- Property address + assessed/market value
+- Owner-occupied vs. absentee (absentee = often more motivated)
+
+Discard leads where the defendant owns no real estate.
+
+### Step 5 — Skip trace for contact info
+
+To reach the owner, skip-trace the confirmed name + address. Free/low-cost options:
+- `cyberbackgroundchecks.com`, `truepeoplesearch.com`, `fastpeoplesearch.com` (free tier)
+- Paid/bulk: BatchLeads, PropStream, Skip Genie, REISkip (better phone accuracy)
+
+### Step 6 — Feed into the pipeline
+
+Add each confirmed, skip-traced lead into the **MSS table** from Stage 0 (tax delinquent +3, foreclosure +3, probate +2, vacant +2, etc.), then hand the best ones to **Stage 2 (Deal Analysis)** to compute MAO before calling. Use the Stage 4 offer script on the call.
+
+> **Compliance note:** Court records and county assessor data are public. When calling, honor Do-Not-Call requests, follow your state's telemarketing/robocall rules (manual dials are generally fine; automated dialers/texts need consent under the TCPA), and never misrepresent who you are. This is a lead source, not legal or investment advice.
+
+---
+
 ## Stage 1: Qualify an Existing Lead
 
 Ask the user for the property address or lead source, then help them qualify the lead.
@@ -121,6 +208,7 @@ Ask the user for the property address or lead source, then help them qualify the
 - MLS — expired/cancelled listings
 - Bandit signs, Facebook Marketplace FSBO, Craigslist
 - Probate court records, foreclosure auction lists
+- **Court records lawsuit scraping** → see Stage 0.5 (highest-signal free lead source)
 
 ---
 
