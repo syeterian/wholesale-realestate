@@ -1,0 +1,16 @@
+[
+  {"event_type": "foreclosure", "case_number": "2026-CA-001234", "property_address": "812 NW 12th Ave, Miami, FL 33136",
+   "defendant_name": "Carlos Mendez", "plaintiff_name": "Bank of America NA", "filing_date": "2026-06-20",
+   "estimated_value_usd": 385000, "mortgage_balance_usd": 210000, "property_equity_estimate_usd": 175000,
+   "county": "Miami-Dade", "state": "FL"},
+  {"event_type": "tax_lien", "case_number": "2026-CA-001234", "property_address": "812 NW 12th Ave, Miami, FL 33136",
+   "defendant_name": "Carlos Mendez", "filing_date": "2026-06-28", "county": "Miami-Dade", "state": "FL"},
+  {"event_type": "probate", "case_number": "2026-CP-000777", "property_address": "245 Meridian Ave, Miami Beach, FL 33139",
+   "decedent_name": "Eleanor Prewitt", "executor_name": "James Prewitt", "filing_date": "2026-06-15",
+   "estimated_value_usd": 620000, "property_equity_estimate_usd": 540000, "county": "Miami-Dade", "state": "FL"},
+  {"event_type": "sheriff_sale", "parcel_apn": "30-4102-011-0450", "property_address_normalized": "1930 SW 8th St, Miami, FL 33135",
+   "defendant_name": "Rosa Delgado", "sale_date": "2026-07-30", "estimated_value_usd": 295000,
+   "property_equity_estimate_usd": 40000, "county": "Miami-Dade", "state": "FL"},
+  {"event_type": "tax_sale", "parcel_apn": "01-3210-055-0010", "property_address": "5501 Biscayne Blvd, Miami, FL 33137",
+   "defendant_name": "Sunshine Rentals LLC", "county": "Miami-Dade", "state": "FL"}
+]

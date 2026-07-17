@@ -23,25 +23,22 @@ One command, no copy/paste. Claude runs an Apify actor that harvests county/city
 Ask the user: **county + state**, **date range** (default: last 30 days), and whether they want raw signals (cheap) or fully enriched callable leads (owner + phone).
 
 ### Step 2 — Run the actor (via Apify MCP)
-Primary actor: **`dominvo/distressed-property-ai-scraper`**. Pick a mode:
 
-| Goal | `mode` | Location field | Cost driver |
-|------|--------|----------------|-------------|
-| Callable leads (fused + scored + skip-traced) | `enriched_lead` | `metros: ["Columbus"]` | ~$0.06 / enriched lead |
-| Fused + scored, no contact | `distress_match` | `metros`/`counties` | ~$0.02 / match |
-| Tax-delinquent list | `tax_delinquent` | `county: "Franklin"` | ~$0.002 / row |
-| Pre-foreclosure list | `pre_foreclosure` | `counties: ["Franklin"]` | ~$0.002 / row |
-| Probate list | `probate_filings` | `counties: ["Franklin"]` | ~$0.002 / row |
-
-Always pass a `limit` (e.g. 25) and a date floor (`since_date` for county modes, `date_from`/`date_to` for city/enriched modes). Example call:
+**Primary actor: `solidcode/probate-foreclosure-leads-scraper`** (or its near-identical siblings `jungle_synthesizer/`, `getascraper/`, `memo23/probate-foreclosure-leads-scraper`). These pull real, normalized records from government open-data portals — case number, parties, address, filing/sale dates, estimated value + equity — for five event types. Input:
 ```json
-{ "mode": "enriched_lead", "metros": ["Columbus"], "signal_types": ["tax_delinquent","pre_foreclosure","code_violations","probate_filings"], "min_signals": 2, "date_from": "2026-06-17", "limit": 25 }
+{ "eventTypes": ["probate","foreclosure","sheriff_sale","tax_lien","tax_sale"], "states": ["FL"], "counties": ["Miami-Dade"], "dateFrom": "2026-06-01", "maxResults": 50 }
 ```
+- Filter by `states` / `counties` / `eventTypes` / `dateFrom`–`dateTo` / `minEstimatedEquity`.
+- Coverage is nationwide-*ish* but source-dependent — if a county returns 0, drop the `counties` (or `states`) filter and widen. Cost ≈ $0.01 start + ~$0.001 per lead.
+
 Then fetch the dataset with `get-dataset-items` and save it to `dataset.json`.
 
-**Ohio / fallback sources** (this niche has no universal schema — try these if coverage is thin):
-- `jungle_synthesizer/salesweb-civilview-sheriff-foreclosure-sales-scraper` — explicitly covers **OH** (+ NJ/PA/IL) sheriff foreclosure sales with addresses + plaintiff/defendant.
-- `solidcode/probate-foreclosure-leads-scraper` / `getascraper/probate-foreclosure-leads-scraper` — probate + foreclosure + sheriff/tax from county records (`states`, `counties`, `eventTypes`, `dateFrom`/`dateTo`).
+> ⚠️ **Avoid `dominvo/distressed-property-ai-scraper` for county leads.** Live testing showed its county modes (`tax_delinquent`, `pre_foreclosure`, `probate_filings`) are unimplemented scaffolds that return 0 records (`county_fetch SCAFFOLD ... no per-county scraper wired`). Its city Socrata modes (`code_violations`, `vacant_registry`) may work, but the probate/foreclosure actors above are the reliable path.
+
+**Other fallback sources:**
+- `jungle_synthesizer/salesweb-civilview-sheriff-foreclosure-sales-scraper` — covers **OH / NJ / PA / IL** sheriff foreclosure sales (Tyler CivilView) with addresses + plaintiff/defendant + judgment amounts.
+- `parseforge/harris-county-court-records-scraper` — Harris County TX probate/civil with parties, addresses, and **phone numbers**.
+- `fortuitous_pirate/florida-court-records-scraper` — Orange County FL court records.
 
 ### Step 3 — Rank into a callable lead sheet
 ```bash

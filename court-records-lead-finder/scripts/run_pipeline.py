@@ -46,11 +46,17 @@ SIGNAL_POINTS = {
 STACK_BONUS = 2              # 2+ distinct distress signals on one parcel
 
 # Field-name candidates (actors in this niche don't share one schema).
-ADDR_KEYS = ("address", "property_address", "site_address", "situs_address", "full_address")
-OWNER_KEYS = ("owner_name", "owner", "defendant", "decedent", "mailing_name", "name")
+ADDR_KEYS = ("address", "property_address", "property_address_normalized",
+             "site_address", "situs_address", "situs", "full_address")
+OWNER_KEYS = ("owner_name", "current_owners", "defendant_name", "decedent_name",
+              "owner", "defendant", "decedent", "mailing_name", "name")
 PHONE_KEYS = ("phone", "phones", "phone_number", "owner_phone", "primary_phone")
 SIGNAL_KEYS = ("mode", "signal_type", "event_type", "eventType", "source", "violation_type")
-KEY_KEYS = ("parcel_key", "parcel_id", "parcelid", "bbl", "apn", "case_number")
+KEY_KEYS = ("parcel_key", "parcel_id", "parcelid", "parcel_apn", "apn", "bbl",
+            "case_number", "event_id")
+VALUE_KEYS = ("estimated_value_usd", "market_value", "total_market_value", "asking_price")
+EQUITY_KEYS = ("property_equity_estimate_usd", "estimated_equity", "equity")
+EQUITY_BONUS_AT = 50000     # a big equity cushion = a viable cash offer
 
 
 def _first(d, keys):
@@ -90,20 +96,28 @@ def load(path):
     return [flatten(r) for r in data if isinstance(r, dict)]
 
 
+def _num(val):
+    try:
+        return float(str(val).replace("$", "").replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
 def group(records):
     """Fuse rows into one entry per property (parcel key, else address)."""
     props = defaultdict(lambda: {"signals": set(), "owner": "", "phone": "",
-                                 "address": "", "raw_signals": []})
+                                 "address": "", "value": None, "equity": None})
     for r in records:
         key = _first(r, KEY_KEYS) or _first(r, ADDR_KEYS) or id(r)
         p = props[key]
         sig = signal_of(r)
         if sig:
             p["signals"].add(sig)
-            p["raw_signals"].append(sig)
         p["address"] = p["address"] or (_first(r, ADDR_KEYS) or "")
         p["owner"] = p["owner"] or (_first(r, OWNER_KEYS) or "")
         p["phone"] = p["phone"] or phone_str(_first(r, PHONE_KEYS))
+        p["value"] = p["value"] if p["value"] is not None else _num(_first(r, VALUE_KEYS))
+        p["equity"] = p["equity"] if p["equity"] is not None else _num(_first(r, EQUITY_KEYS))
     return props
 
 
@@ -126,12 +140,17 @@ def score(props):
         if len(distinct) >= 2:
             pts += STACK_BONUS
             reasons.append(f"{len(distinct)} stacked signals (+{STACK_BONUS})")
+        if p["equity"] is not None and p["equity"] >= EQUITY_BONUS_AT:
+            pts += 2
+            reasons.append(f"~${int(p['equity']):,} equity (+2)")
         tier = "Hot" if pts >= 6 else "Warm" if pts >= 3 else "Skip"
         out.append({
             "owner": p["owner"] or "(unknown — skip-trace)",
             "address": p["address"],
             "phone": p["phone"] or "(needs skip-trace)",
             "signals": ", ".join(sorted(distinct)),
+            "value": f"${int(p['value']):,}" if p["value"] else "",
+            "equity": f"${int(p['equity']):,}" if p["equity"] else "",
             "score": pts,
             "tier": tier,
             "why": "; ".join(reasons) or "no scored signal",
@@ -144,16 +163,17 @@ def render(rows, fmt):
     if fmt == "json":
         return json.dumps(rows, indent=2)
     if fmt == "csv":
-        cols = ("score", "tier", "owner", "address", "phone", "signals", "why")
+        cols = ("score", "tier", "owner", "address", "phone", "value", "equity", "signals", "why")
         lines = [",".join(cols)]
         for r in rows:
             lines.append(",".join(f'"{r[c]}"' for c in cols))
         return "\n".join(lines)
-    lines = [f"{'#':>2}  {'SCORE':>5}  {'Tier':<5}  {'Owner':<22}  {'Address':<30}  {'Phone':<16}  Signals",
-             "-" * 120]
+    lines = [f"{'#':>2}  {'SCORE':>5}  {'Tier':<5}  {'Owner':<20}  {'Address':<28}  "
+             f"{'Est.Value':>10}  {'Equity':>10}  Signals",
+             "-" * 130]
     for i, r in enumerate(rows, 1):
-        lines.append(f"{i:>2}  {r['score']:>5}  {r['tier']:<5}  {r['owner'][:22]:<22}  "
-                     f"{r['address'][:30]:<30}  {r['phone'][:16]:<16}  {r['signals']}")
+        lines.append(f"{i:>2}  {r['score']:>5}  {r['tier']:<5}  {r['owner'][:20]:<20}  "
+                     f"{r['address'][:28]:<28}  {r['value']:>10}  {r['equity']:>10}  {r['signals']}")
     hot = sum(1 for r in rows if r["tier"] == "Hot")
     warm = sum(1 for r in rows if r["tier"] == "Warm")
     lines += ["-" * 120,
