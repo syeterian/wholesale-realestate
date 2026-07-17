@@ -9,9 +9,57 @@ Turn free, public court dockets into a ranked list of motivated-seller leads for
 
 **The logic:** defendants in certain lawsuits are financially distressed and often own real estate they need to offload fast — a tax lien, a foreclosure filing, an inherited house stuck in probate, a divorce forcing a sale. Court records are public and updated daily. AI reads hundreds of case captions and flags the handful worth calling.
 
-This skill runs the full loop: **locate portal → pull dockets → score with AI → confirm ownership → skip-trace → hand off to offer.**
+This skill has two modes:
+- **Automated mode (recommended)** — one Apify actor pulls, fuses, scores, and skip-traces county distress records into callable leads. No copy/paste.
+- **Manual mode (fallback)** — drive the county court portal by hand when no data source covers it.
 
 ---
+
+## Automated mode (recommended) — Apify
+
+One command, no copy/paste. Claude runs an Apify actor that harvests county/city open-data distress signals (tax delinquency, pre-foreclosure, sheriff/tax sale, code violations, vacant registry, probate), **fuses them per property, scores distress, and skip-traces to a callable owner** — then this skill re-ranks with the wholesale rubric and hands you a dial-ready sheet.
+
+### Step 1 — Collect target
+Ask the user: **county + state**, **date range** (default: last 30 days), and whether they want raw signals (cheap) or fully enriched callable leads (owner + phone).
+
+### Step 2 — Run the actor (via Apify MCP)
+Primary actor: **`dominvo/distressed-property-ai-scraper`**. Pick a mode:
+
+| Goal | `mode` | Location field | Cost driver |
+|------|--------|----------------|-------------|
+| Callable leads (fused + scored + skip-traced) | `enriched_lead` | `metros: ["Columbus"]` | ~$0.06 / enriched lead |
+| Fused + scored, no contact | `distress_match` | `metros`/`counties` | ~$0.02 / match |
+| Tax-delinquent list | `tax_delinquent` | `county: "Franklin"` | ~$0.002 / row |
+| Pre-foreclosure list | `pre_foreclosure` | `counties: ["Franklin"]` | ~$0.002 / row |
+| Probate list | `probate_filings` | `counties: ["Franklin"]` | ~$0.002 / row |
+
+Always pass a `limit` (e.g. 25) and a date floor (`since_date` for county modes, `date_from`/`date_to` for city/enriched modes). Example call:
+```json
+{ "mode": "enriched_lead", "metros": ["Columbus"], "signal_types": ["tax_delinquent","pre_foreclosure","code_violations","probate_filings"], "min_signals": 2, "date_from": "2026-06-17", "limit": 25 }
+```
+Then fetch the dataset with `get-dataset-items` and save it to `dataset.json`.
+
+**Ohio / fallback sources** (this niche has no universal schema — try these if coverage is thin):
+- `jungle_synthesizer/salesweb-civilview-sheriff-foreclosure-sales-scraper` — explicitly covers **OH** (+ NJ/PA/IL) sheriff foreclosure sales with addresses + plaintiff/defendant.
+- `solidcode/probate-foreclosure-leads-scraper` / `getascraper/probate-foreclosure-leads-scraper` — probate + foreclosure + sheriff/tax from county records (`states`, `counties`, `eventTypes`, `dateFrom`/`dateTo`).
+
+### Step 3 — Rank into a callable lead sheet
+```bash
+python3 scripts/run_pipeline.py dataset.json [--min-score N] [--format table|csv|json]
+```
+Fuses signal rows per property, applies the wholesale-tuned distress weights (same logic as the CCDS rubric below), pulls owner + phone where present, and ranks **Hot / Warm / Skip**. Hand the Hot leads straight to **Stage 6 (offer)**.
+
+### Caveats (be honest with the user)
+- **Coverage varies by county.** The open-data sources skew toward large metros; a given Ohio county may return few or zero rows. If thin, switch to a fallback actor or fall back to Manual mode.
+- **Cost is per-result.** Cap every run with `limit`. Enriched leads cost more than raw signals.
+- **Approval.** Running a new Apify actor may require a one-time approval in your Apify/Claude connection.
+- Always **confirm ownership + value on the county auditor site** before calling — skip-trace and open data can be stale.
+
+---
+
+## Manual mode (fallback)
+
+Use when no automated source covers the target county.
 
 ## Stage 1 — Locate the county court-records portal
 
@@ -105,6 +153,12 @@ Court records and county assessor data are public. When calling: honor Do-Not-Ca
 
 ## Quick start
 
-1. `python3 scripts/score_cases.py assets/sample_dockets.csv` — see the workflow on sample data.
-2. Replace the sample CSV with real dockets pulled from your county portal.
+**Automated (recommended):**
+1. `python3 scripts/run_pipeline.py assets/sample_apify_output.json` — see the automated pipeline on sample actor output.
+2. Run `dominvo/distressed-property-ai-scraper` for your county via Apify, save `dataset.json`, then `python3 scripts/run_pipeline.py dataset.json`.
+3. Confirm ownership on the county auditor → call the Hot leads first.
+
+**Manual (fallback):**
+1. `python3 scripts/score_cases.py assets/sample_dockets.csv` — see the scorer on sample dockets.
+2. Replace the sample CSV with real dockets copied from your county portal.
 3. Confirm ownership → skip-trace → call the Hot leads first.

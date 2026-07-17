@@ -1,0 +1,23 @@
+[
+  {"mode": "tax_delinquent", "parcel_key": "OH-FRANKLIN-010-00123", "address": "482 E 5th Ave, Columbus, OH 43201",
+   "payload": {"source": "franklin_treasurer", "signal_date": "2026-06-18", "owner_name": "Vincent Sample"}},
+  {"mode": "code_violations", "parcel_key": "OH-FRANKLIN-010-00123", "address": "482 E 5th Ave, Columbus, OH 43201",
+   "payload": {"violation_type": "housing", "signal_date": "2026-06-30"}},
+  {"mode": "enriched_lead", "parcel_key": "OH-FRANKLIN-010-00123", "address": "482 E 5th Ave, Columbus, OH 43201",
+   "payload": {"owner_name": "Vincent Sample", "mailing_address": "PO Box 771, Columbus, OH 43216",
+               "phone": ["614-555-0142", "614-555-8890"], "distress_score": 0.81}},
+
+  {"mode": "pre_foreclosure", "parcel_key": "OH-FRANKLIN-020-04567", "address": "1190 Oakwood Ave, Columbus, OH 43206",
+   "payload": {"source": "franklin_recorder", "signal_date": "2026-07-01", "owner_name": "Rebecca Ortiz"}},
+  {"mode": "high_equity", "parcel_key": "OH-FRANKLIN-020-04567", "address": "1190 Oakwood Ave, Columbus, OH 43206",
+   "payload": {"equity_pct": "0.72", "owner_name": "Rebecca Ortiz", "phone": "614-555-2301"}},
+
+  {"mode": "probate_filings", "parcel_key": "OH-FRANKLIN-030-09981", "address": "77 Maplewood Dr, Columbus, OH 43213",
+   "payload": {"source": "franklin_probate", "decedent": "Harold Whitfield", "signal_date": "2026-06-25"}},
+
+  {"mode": "vacant_registry", "parcel_key": "OH-FRANKLIN-040-03310", "address": "2204 Cleveland Ave, Columbus, OH 43211",
+   "payload": {"source": "columbus_vacant", "signal_date": "2026-05-20"}},
+
+  {"mode": "absentee_owner", "parcel_key": "OH-FRANKLIN-050-07742", "address": "918 S High St, Columbus, OH 43206",
+   "payload": {"owner_name": "Oakwood Holdings LLC", "mailing_address": "Reno, NV"}}
+]
