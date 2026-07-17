@@ -24,21 +24,22 @@ Ask the user: **county + state**, **date range** (default: last 30 days), and wh
 
 ### Step 2 — Run the actor (via Apify MCP)
 
-**Primary actor: `solidcode/probate-foreclosure-leads-scraper`** (or its near-identical siblings `jungle_synthesizer/`, `getascraper/`, `memo23/probate-foreclosure-leads-scraper`). These pull real, normalized records from government open-data portals — case number, parties, address, filing/sale dates, estimated value + equity — for five event types. Input:
+> **Hard-won lesson (verified by live testing):** avoid the "nationwide distressed-property from open-data" actors — `dominvo/distressed-property-ai-scraper` and the `*/probate-foreclosure-leads-scraper` family (solidcode, jungle_synthesizer, getascraper, memo23). They over-promise in the README but return **0 real leads**: `dominvo`'s county modes are unimplemented scaffolds, and the probate/foreclosure family just keyword-scans random Socrata assessor/sales datasets and keeps nothing. Foreclosure/probate/eviction filings mostly are **not** published as open-data APIs — they live in county court portals. Use scrapers that target a **real, specific source** instead:
+
+**Recommended (real sources that actually return data):**
+
+| Actor | Source it scrapes | Coverage | Notes |
+|-------|-------------------|----------|-------|
+| `seibs.co/foreclosure-property-leads` | **Zillow** foreclosure / pre-foreclosure / REO / auction | Nationwide (any `City, ST`) | Returns address, price, **ARV + MAO (70% rule)**, flip score, distress sub-tags. Best general-purpose starting point. |
+| `jungle_synthesizer/salesweb-civilview-sheriff-foreclosure-sales-scraper` | Tyler **CivilView / SalesWeb** sheriff sales | OH / NJ / PA / IL | Real docket data: address, plaintiff/defendant, judgment amount. |
+| `parseforge/harris-county-court-records-scraper` | Harris County TX clerk | Houston | Probate/civil parties + addresses + **phone numbers**. |
+| `fortuitous_pirate/florida-court-records-scraper` | Orange County FL clerk | Orlando | Court records; may need a captcha key. |
+
+Zillow example input:
 ```json
-{ "eventTypes": ["probate","foreclosure","sheriff_sale","tax_lien","tax_sale"], "states": ["FL"], "counties": ["Miami-Dade"], "dateFrom": "2026-06-01", "maxResults": 50 }
+{ "locations": ["Miami, FL", "Fort Lauderdale, FL"], "only_foreclosures": true, "home_types": ["SingleFamily","Townhouse"], "max_results_per_location": 25 }
 ```
-- Filter by `states` / `counties` / `eventTypes` / `dateFrom`–`dateTo` / `minEstimatedEquity`.
-- Coverage is nationwide-*ish* but source-dependent — if a county returns 0, drop the `counties` (or `states`) filter and widen. Cost ≈ $0.01 start + ~$0.001 per lead.
-
-Then fetch the dataset with `get-dataset-items` and save it to `dataset.json`.
-
-> ⚠️ **Avoid `dominvo/distressed-property-ai-scraper` for county leads.** Live testing showed its county modes (`tax_delinquent`, `pre_foreclosure`, `probate_filings`) are unimplemented scaffolds that return 0 records (`county_fetch SCAFFOLD ... no per-county scraper wired`). Its city Socrata modes (`code_violations`, `vacant_registry`) may work, but the probate/foreclosure actors above are the reliable path.
-
-**Other fallback sources:**
-- `jungle_synthesizer/salesweb-civilview-sheriff-foreclosure-sales-scraper` — covers **OH / NJ / PA / IL** sheriff foreclosure sales (Tyler CivilView) with addresses + plaintiff/defendant + judgment amounts.
-- `parseforge/harris-county-court-records-scraper` — Harris County TX probate/civil with parties, addresses, and **phone numbers**.
-- `fortuitous_pirate/florida-court-records-scraper` — Orange County FL court records.
+Then fetch the dataset with `get-dataset-items` and save it to `dataset.json`. `run_pipeline.py` reads whatever address/status/value fields the actor emits.
 
 ### Step 3 — Rank into a callable lead sheet
 ```bash
